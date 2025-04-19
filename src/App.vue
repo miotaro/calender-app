@@ -111,7 +111,9 @@ const cancelEdit = () => {
           :key="todayMonth + '-' + day"
           class="day"
           @click="selectDate(month, day)"
-        >{{ day }}</div>
+        >{{ day }}
+          <span v-if="events[formatDate(todayYear, month, day)]">♡</span>
+        </div>
       </div>
 
       <div v-if="selectedDate && selectedMonth === month">

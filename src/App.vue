@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
+import draggable from 'vuedraggable'
 
 const today = new Date()
 const todayMonth = ref(today.getMonth())
@@ -22,13 +23,19 @@ const events = ref({
   endDate: '',
   text: '',
   status: '',
-  category: ''
+  category: '',
+  timeType: '',
+  startTime: '',
+  endTime: '',
 })
 const selectedDate = ref('')
 const selectedMonth = ref(null)
 const newEvent = ref('')
 const newEventCategory = ref('仕事')
 const newEventEndDate = ref('')
+const newEventTimeType = ref(true) //終日はtrue、時間指定はfalse
+const newEventStartTime = ref('')
+const newEventEndTime = ref('')
 
 const formatDate = (year, month, day) => {
   return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -46,22 +53,47 @@ const selectDate = (month, day) => {
   }
 }
 
+const toggleTimeType = () => {
+  newEventTimeType.value = !newEventTimeType.value
+}
+
+const toggleTimeTypeText = computed(() => {
+  return newEventTimeType.value ? '時間指定' : '終日' 
+})
+ 
 const addEvent = () => {
   const text = newEvent.value.trim()
-  const start =selectedDate.value
-  const end = newEventEndDate.value || start
+  const startD =selectedDate.value
+  const endD = newEventEndDate.value || startD
+  const type = newEventTimeType
+  const startT = newEventStartTime
+  const endT = newEventEndTime
 
-  if (!text || !start || !selectedDate.value) return
+  if (!text || !startD || !selectedDate.value) return
   if (!events.value[selectedDate.value]) {
     events.value[selectedDate.value] = []
   }
-  events.value[selectedDate.value].push({
-    startDate: start,
-    endDate: end,
+  if (type.value === true) {
+    events.value[selectedDate.value].push({
+    startDate: startD,
+    endDate: endD,
     text: text,
     status: "未着手",
-    category: newEventCategory.value
-  })
+    category: newEventCategory.value,
+    timeType: type
+    })
+  } else if (type.value === false) {
+    events.value[selectedDate.value].push({
+    startDate: startD,
+    endDate: endD,
+    text: text,
+    status: "未着手",
+    category: newEventCategory.value,
+    timeType: type,
+    startTime: startT,
+    endTime: endT
+    })
+  }
   newEvent.value = ''
   newEventEndDate.value = ''
   saveEventsToLocalStorage()
@@ -102,15 +134,24 @@ const deleteEvent = (index) => {
 
 const editEvent = ref(null)
 const editText = ref('')
+const editStartTime = ref('')
+const editEndTime = ref('')
 
 const startEdit = (index, event) => {
   editEvent.value = index
   editText.value = event.text
+  editStartTime.value = event.startTime || ''
+  editEndTime.value = event.endTime || ''
 }
 
 const saveEdit = (index) => {
   if (editText.value.trim()) {
-    events.value[selectedDate.value][index].text = editText.value.trim()
+    const event = events.value[selectedDate.value][index]
+    event.text = editText.value.trim()
+    if (event.timeType === false) {
+      event.startTime = editStartTime.value
+      event.endTime = editEndTime.value
+    }
     saveEventsToLocalStorage()
   }
   cancelEdit()
@@ -119,6 +160,8 @@ const saveEdit = (index) => {
 const cancelEdit = () => {
   editEvent.value = null
   editText.value = ''
+  editStartTime.value = ''
+  editEndTime.value = ''
 }
 
 const selectedCategoryFilter = ref('全て')
@@ -138,7 +181,7 @@ const filterEvents = computed(() => {
   })
 })
 
-// スクリプトに追加
+// 日本語入力中は保存しない
 const handleEnter = (e) => {
   // IME（日本語変換）中でなければ保存
   if (e.isComposing === false) {
@@ -175,7 +218,8 @@ const handleEnter = (e) => {
             <div
               v-for="event in getEventsForDate(todayYear, month, day)"
               :key="event.text"
-              :class="`event-preview category-${getEventsForDate(todayYear, month, day)[0].category}`"
+              :class="[
+                event.timeType ? `event-preview category-${event.category}` : `event-preview time-category-${event.category}`]"
             >{{ event.text }}</div>
           </div>
         </div>
@@ -184,24 +228,37 @@ const handleEnter = (e) => {
       <div v-if="selectedDate && selectedMonth === month">
         <div class="form">
           <h3>{{ selectedDate }}の予定</h3>
-          <input 
-            v-model="newEvent"
-            placeholder="予定を入力してね"
-            @keydown.enter.exact.prevent="handleEnter"
-          />
-          <input
-            type="date" v-model="newEventEndDate" placeholder="終了日"
-            class="end-date"
-          />
-          <select v-model="newEventCategory">
-            <option value="仕事">仕事</option>
-            <option value="プライベート">プライベート</option>
-            <option value="健康">健康</option>
-            <option value="趣味">趣味</option>
-          </select>
-          <button @click="addEvent">追加</button>
+          <div class="text-form">
+            <input 
+              v-model="newEvent"
+              placeholder="予定を入力してね"
+              @keydown.enter.exact.prevent="handleEnter"
+            />
+            <button @click="toggleTimeType()">{{ toggleTimeTypeText }}</button>
+            <div v-if="newEventTimeType">
+              <div class="event-date-time">
+                終了日
+                <input type="date" v-model="newEventEndDate" placeholder="終了日"/>
+              </div>
+            </div>
+            <div v-else="!newEventTimeType">
+              <div class="event-date-time">
+                開始時間
+                <input type="time" v-model="newEventStartTime" placeholder="開始時間" />
+                終了時間
+                <input type="time" v-model="newEventEndTime" placeholder="終了時間" />
+              </div>
+            </div>
+            <select v-model="newEventCategory">
+              <option value="仕事">仕事</option>
+              <option value="プライベート">プライベート</option>
+              <option value="健康">健康</option>
+              <option value="趣味">趣味</option>
+            </select>
+            <button @click="addEvent">追加</button>
+          </div>
 
-          <ul v-if="filterEvents.length > 0" class="events">
+          <ul class="events">
             <label>カテゴリで絞り込み</label>
             <select v-model="selectedCategoryFilter">
               <option value="全て">全て</option>
@@ -219,21 +276,27 @@ const handleEnter = (e) => {
             </select>
             <li
               v-for="(event, index) in filterEvents"
-              :key="index"
+              :key="event.text + index"
               @click="startEdit(index, event)"
-              :class="`status status-${event.status}`"
+              :class="status"
             >
-              <div v-if="editEvent === index">
-                <input
-                  v-model="editText"
-                  @keyup.enter="saveEdit(index)"
-                  @blur="cancelEdit"
-                  autofocus
-                />
+              <div 
+                v-if="editEvent === index">
+                <input v-model="editText" @keyup.enter="saveEdit(index)" />
+                <span v-if="!event.timeType">
+                  <input type="time" v-model="editStartTime" @keyup.enter="saveEdit(index)" />
+                  〜
+                  <input type="time" v-model="editEndTime" @keyup.enter="saveEdit(index)" />
+                </span>
               </div>
-              <div v-else class="event">
+              <div v-else class="text-form">
                 <div :class="`category category-${event.category}`"></div>
-                <div class="text">{{ event.text }}</div>
+                <div class="text">
+                  <span :class="`status-${event.status}`">{{ event.text }}</span>
+                  <span v-if="!event.timeType" class="event-date-time">
+                    {{ event.startTime }} 〜 {{ event.endTime }}
+                  </span>
+                </div>
                 <select v-model="event.status" @change="saveEventsToLocalStorage" @click.stop>
                   <option value="未着手">未着手</option>
                   <option value="進行中">進行中</option>
@@ -274,8 +337,9 @@ body {
   margin: 10px;
 }
 .day {
+  overflow-y: auto;
   height: 100px;
-  padding: 5px 10px;
+  padding: 5px 4px 5px 10px;
   cursor: pointer;
   background-color: lightcyan;
   border: 1px solid cyan;
@@ -284,9 +348,15 @@ body {
   background-color: rgb(180, 255, 255);
 }
 .event-preview {
+  font-size: 12px;
   border-radius: 5px;
-  padding: 5px;
-  line-height: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 5px;
+}
+.day::-webkit-scrollbar {
+  width: 0;
 }
 .empty {
   background-color: white;
@@ -301,13 +371,19 @@ body {
   background-color: white;
   border: 1px solid cyan;
 }
-.event {
+.text-form {
   display: flex;
+  margin-bottom: 5px;
+}
+.event-date-time {
+  color: gray;
+  font-size: 13px;
+  margin-left: 20px;
 }
 button {
-  margin-left: 20px;
+  margin-left: 10px;
   padding: 4px 7px;
-  border-radius: 50%;
+  border-radius: 5px;
   background-color: rgb(180, 255, 255);
   border: none;
   box-shadow: 5px 5px 15px -10px;
@@ -324,6 +400,12 @@ input {
   padding: 10px;
   background-color: lightcyan;
   border: 1px solid cyan;
+}
+input:hover {
+  background-color: rgb(180, 255, 255);
+}
+.text-form {
+  display: flex;
 }
 .text {
   flex: 1;
@@ -343,7 +425,6 @@ select:hover {
 }
 .status-進行中 {
   font-weight: bold;
-  color: red;
 }
 .status-完了 {
   color: rgb(190, 188, 188);
@@ -378,7 +459,19 @@ select:hover {
   background-color: orange;
 }
 .category-趣味 {
-  background-color: lightgreen;
+  background-color: green;
+}
+.time-category-仕事 {
+  color: blue;
+}
+.time-category-プライベート {
+  color: rgb(245, 114, 249);
+}
+.time-category-健康 {
+  color: orange;
+}
+.time-category-趣味 {
+  color: green;
 }
 
 </style>

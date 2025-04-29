@@ -1,5 +1,5 @@
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, computed } from 'vue';
 import EventItem from './EventItem.vue'
 
 const props = defineProps({
@@ -18,13 +18,18 @@ const formatDate = (year, month, day) => {
 const handleClick = () => {
   emit('select-date', { clickedDate: formatDate(props.year, props.month, props.day), month: props.month })
 }
+
+const activeEvents = computed(() => {
+  if (!props.events) return []
+  return Object.values(props.events).filter(event => event.status !== '完了')
+}) //Object.valuesはオブジェクトの中身だけ取り出してる
 </script>
 
 <template>
   <div class="day" @click="handleClick">
     {{ day }}
-    <div v-if="events && Object.keys(events).length > 0">
-      <EventItem v-for="event in events" :key="event.text" :event="event" />
+    <div v-if="activeEvents.length > 0">
+      <EventItem v-for="event in activeEvents" :key="event.text" :event="event" />
     </div>
   </div>
 </template>

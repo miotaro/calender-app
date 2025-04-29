@@ -1,5 +1,5 @@
 <script setup>
-import { defineProps, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits } from 'vue'
 import EventForm from './EventForm.vue'
 import DayCell from './DayCell.vue'
 
@@ -40,6 +40,15 @@ const getEventsForDate = (year, month, day) => {
 const handleUpdateEvents = (newEvents) => {
   emit('update-events', newEvents)
 }
+
+const isModalOpen = ref(false)
+const openModal = () => {
+  isModalOpen.value = true
+}
+const closeModal = () => {
+  isModalOpen.value = false
+}
+
 </script>
 
 <template>
@@ -65,6 +74,7 @@ const handleUpdateEvents = (newEvents) => {
         :events="getEventsForDate(todayYear, month, day)"
         :selectedDate="selectedDate"
         @select-date="emit('select-date', $event)"
+        @click="openModal"
       />
     </div>
     <EventForm
@@ -72,7 +82,9 @@ const handleUpdateEvents = (newEvents) => {
       :selectedDate="selectedDate"
       :selectedMonth="selectedMonth"
       :month="month"
+      :isModalOpen="isModalOpen"
       @update-events="handleUpdateEvents"
+      @click.self="closeModal"
     />
   </div>
 

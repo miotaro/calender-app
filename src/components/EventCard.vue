@@ -1,48 +1,38 @@
 <script setup>
-import { ref, defineProps, defineEmits, computed } from 'vue';
+import { ref, defineProps, computed } from 'vue';
+import { useEventsStore } from '@/stores/useEventsStore'
+import { selectedDateStore } from '@/stores/selectedDateStore'
+import { storeToRefs } from 'pinia'
+
+const eventStore = useEventsStore()
+const { events } = storeToRefs(eventStore)
+const dateStore = selectedDateStore()
+const { selectedDate } = storeToRefs(dateStore)
 
 const props = defineProps({
-  events: Object,
-  selectedDate: String,
   selectedCategoryFilter: String,
-  selectedStatusFilter: String
+  selectedStatusFilter: String,
 })
-
-const editEvent = ref(null)
-const editText = ref('')
-const editStartTime = ref('')
-const editEndTime = ref('')
-
-const emit = defineEmits(['update-events'])
-
-const startEdit = (index, event) => {
-  editEvent.value = index
-  editText.value = event.text
-  editStartTime.value = event.startTime || ''
-  editEndTime.value = event.endTime || ''
-}
 
 const saveEdit = (index) => {
   if (editText.value.trim()) {
-    const event = props.events[props.selectedDate][index]
+    const event = events.value[selectedDate.value][index]
     event.text = editText.value.trim()
     if (event.timeType === false) {
       event.startTime = editStartTime.value
       event.endTime = editEndTime.value
     }
-    emit('update-events', props.events)
-    saveEventsToLocalStorage(props.events)
+    saveEventsToLocalStorage(events.value)
   }
   cancelEdit()
 }
 
 const deleteEvent = (index) => {
-  const date = props.selectedDate
-  if (props.events[date] && props.events[date].length > index) {
-    props.events[date].splice(index, 1)
+  const date = selectedDate.value
+  if (events.value[date] && events.value[date].length > index) {
+    events.value[date].splice(index, 1)
   }
-  emit('update-events', props.events)
-  saveEventsToLocalStorage(props.events)
+  saveEventsToLocalStorage(events.value)
 }
 
 const cancelEdit = () => {
@@ -52,12 +42,21 @@ const cancelEdit = () => {
   editEndTime.value = ''
 }
 
+const saveEventsToLocalStorage = (data) => {
+  localStorage.setItem('calendar-events', JSON.stringify(data))
+}
+
+const editEvent = ref(null)
+const editText = ref('')
+const editStartTime = ref('')
+const editEndTime = ref('')
+
 const filterEvents = computed(() => {
-  if (!props.events[props.selectedDate]) return []
+  if (!events.value[selectedDate.value]) return []
   if (props.selectedCategoryFilter === '全て' && props.selectedStatusFilter === '全て') {
-    return props.events[props.selectedDate]
+    return events.value[selectedDate.value]
   }
-  return props.events[props.selectedDate].filter(event => {
+  return events.value[selectedDate.value].filter(event => {
     const categoryMatch =
       props.selectedCategoryFilter === '全て' || event.category === props.selectedCategoryFilter
     const statusMatch =
@@ -66,9 +65,13 @@ const filterEvents = computed(() => {
   })
 })
 
-const saveEventsToLocalStorage = (data) => {
-  localStorage.setItem('calendar-events', JSON.stringify(data))
+const startEdit = (index, event) => {
+  editEvent.value = index
+  editText.value = event.text
+  editStartTime.value = event.startTime || ''
+  editEndTime.value = event.endTime || ''
 }
+
 </script>
 
 <template>
@@ -77,7 +80,6 @@ const saveEventsToLocalStorage = (data) => {
     v-for="(event, index) in filterEvents"
     :key="event.text + index"
     @click="startEdit(index, event)"
-    class="status"
   >
     <div v-if="editEvent === index">
       <input v-model="editText" @keyup.enter="saveEdit(index)" />
@@ -107,7 +109,7 @@ const saveEventsToLocalStorage = (data) => {
 </template>
 
 <style>
-.status {
+li {
   list-style: none;
 }
 .status-進行中 {
@@ -147,6 +149,7 @@ const saveEventsToLocalStorage = (data) => {
 }
 .category-趣味 {
   background-color: green;
+  color: white;
 }
 .time-category-仕事 {
   color: blue;

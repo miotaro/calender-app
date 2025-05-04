@@ -455,6 +455,7 @@ select:hover {
 }
 .category-趣味 {
   background-color: green;
+  color: white;
 }
 .time-category-仕事 {
   color: blue;

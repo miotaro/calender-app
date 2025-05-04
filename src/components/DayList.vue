@@ -1,17 +1,13 @@
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref, watch } from 'vue'
+import { selectedDateStore } from '@/stores/selectedDateStore'
+import { storeToRefs } from 'pinia'
 import EventForm from './EventForm.vue'
 import DayCell from './DayCell.vue'
 
-const props = defineProps({
-  events: Object,
-  selectedDate: String,
-  selectedMonth: Number,
-  month: Number,
-  todayYear: Number,
-  todayMonth: Number
-})
-const emit = defineEmits(['select-date', 'update-events'])
+const dateStore = selectedDateStore()
+const { todayYear } = storeToRefs(dateStore)
+const { selectedDate } = storeToRefs(dateStore)
 
 const getDaysInMonth = (year, month) => {
   const days = new Date(year, month + 1, 0).getDate()
@@ -25,22 +21,6 @@ const getFirstDayOfMonth = (year, month) => {
   return new Date(year, month, 1).getDay()
 }
 
-const formatDate = (year, month, day) => {
-  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
-
-const getEventsForDate = (year, month, day) => {
-  const date = formatDate(year, month, day)
-  const allEvents = Object.values(props.events).flat()
-  return allEvents.filter(event => {
-    return date >= event.startDate && date <= event.endDate
-  })
-}
-
-const handleUpdateEvents = (newEvents) => {
-  emit('update-events', newEvents)
-}
-
 const isModalOpen = ref(false)
 const openModal = () => {
   isModalOpen.value = true
@@ -48,6 +28,10 @@ const openModal = () => {
 const closeModal = () => {
   isModalOpen.value = false
 }
+
+watch(selectedDate, (newVal) => {
+  if (newVal) isModalOpen.value = true
+})
 
 </script>
 
@@ -68,22 +52,14 @@ const closeModal = () => {
       <DayCell
         v-for="day in getDaysInMonth(todayYear, month)"
         :key="month + '-' + day"
-        :year="todayYear"
         :month="month"
         :day="day"
-        :events="getEventsForDate(todayYear, month, day)"
-        :selectedDate="selectedDate"
-        @select-date="emit('select-date', $event)"
         @click="openModal"
       />
     </div>
     <EventForm
-      :events="events"
-      :selectedDate="selectedDate"
-      :selectedMonth="selectedMonth"
-      :month="month"
-      :isModalOpen="isModalOpen"
-      @update-events="handleUpdateEvents"
+      v-if="selectedDate && isModalOpen"
+      class="modal-overlay"
       @click.self="closeModal"
     />
   </div>
@@ -121,5 +97,15 @@ const closeModal = () => {
 }
 .empty:hover {
   background-color: white;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(1px);
+  z-index: 1000;
+  -webkit-backdrop-filter: blur(6px);
 }
 </style>

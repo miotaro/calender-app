@@ -1,131 +1,59 @@
 <script setup>
-import { ref, watch, onMounted, computed, defineProps, defineEmits } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useEventsStore } from '@/stores/useEventsStore'
+import { selectedDateStore } from '@/stores/selectedDateStore'
+import { storeToRefs } from 'pinia'
 import EventCard from './EventCard.vue'
 
-//propsとemitを受け取る
-const props = defineProps({
-  events: Object,
-  selectedDate: String,
-  selectedMonth: Number,
-  month: Number,
-  isModalOpen: Boolean
-})
-const emit = defineEmits(['update-events'])
-
-const newEvent = ref('')
-const newEventCategory = ref('仕事')
-const newEventEndDate = ref('')
-const newEventTimeType = ref(true) //終日はtrue、時間指定はfalse
-const newEventStartTime = ref('')
-const newEventEndTime = ref('')
-
-const toggleTimeType = () => {
-  newEventTimeType.value = !newEventTimeType.value
-}
-
-const toggleTimeTypeText = computed(() => {
-  return newEventTimeType.value ? '時間指定' : '終日' 
-})
- 
-const addEvent = () => {
-  const text = newEvent.value.trim()
-  const startD = props.selectedDate
-  const endD = newEventEndDate.value || startD
-  const type = newEventTimeType.value
-  const startT = newEventStartTime.value
-  const endT = newEventEndTime.value
-
-  if (!text || !startD) return
-
-  const updateEvents = { ...props.events }
-  if (!updateEvents[startD]) {
-    updateEvents[startD] = []
-  }
-
-  updateEvents[startD].push({
-    startDate: startD,
-    endDate: endD,
-    text,
-    status: '未着手',
-    category: newEventCategory.value,
-    timeType: type,
-    ...(type === false && { startTime: startT, endTime: endT })
-  })
-
-  emit('update-events', updateEvents)
-
-  newEvent.value = ''
-  newEventEndDate.value = ''
-  newEventStartTime.value = ''
-  newEventEndTime.value = ''
-  saveEventsToLocalStorage(updateEvents)
-}
-
-const saveEventsToLocalStorage = (data) => {
-  localStorage.setItem('calendar-events', JSON.stringify(data))
-}
-
-watch(() => props.events, (newEvents) => {
-  saveEventsToLocalStorage(newEvents)
-}, {deep: true})
-
-const loadEventsFromLocalStorage = () => {
-  const stored = localStorage.getItem('calendar-events')
-  if (stored) {
-    emit('update-events', JSON.parse(stored))
-  }
-}
-//ローカルストレージから呼び出す
-onMounted(loadEventsFromLocalStorage)
-
-// 日本語入力中は保存しない
-const handleEnter = (e) => {
-  // IME（日本語変換）中でなければ保存
-  if (e.isComposing === false) {
-    addEvent()
-  }
-}
-
-const handleUpdateEvents = (updateEvents) => {
-  emit('update-events', updateEvents)
-}
+const eventStore = useEventsStore()
+const dateStore = selectedDateStore()
+const { selectedDate } = storeToRefs(dateStore)
 
 const selectedCategoryFilter = ref('全て')
 const selectedStatusFilter = ref('全て')
+
+const inputRef = ref(null)
+onMounted(() => {
+  if (inputRef.value) {
+    inputRef.value.focus()
+  }
+})
+
 </script>
 
 <template>
-  <div v-if="selectedDate && selectedMonth === month && isModalOpen" class="modal-overlay">
+  <div class="modal">
     <div class="form">
       <h3>{{ selectedDate }}の予定</h3>
       <div class="text-form">
         <input 
-          v-model="newEvent"
+          v-model="eventStore.newEvent"
+          ref="inputRef"
           placeholder="予定を入力してね"
-          @keydown.enter.exact.prevent="handleEnter"
+          @keydown.enter.exact.prevent="eventStore.handleEnter"
         />
-        <button @click="toggleTimeType()">{{ toggleTimeTypeText }}</button>
-        <div v-if="newEventTimeType">
+        <button @click="eventStore.toggleTimeType()">{{ eventStore.toggleTimeTypeText }}</button>
+        <div v-if="eventStore.newEventTimeType">
           <div class="event-date-time">
             終了日
-            <input type="date" v-model="newEventEndDate" placeholder="終了日"/>
+            <input type="date" v-model="eventStore.newEventEndDate" placeholder="終了日"/>
           </div>
         </div>
         <div v-else>
           <div class="event-date-time">
             開始時間
-            <input type="time" v-model="newEventStartTime" placeholder="開始時間" />
+            <input type="time" v-model="eventStore.newEventStartTime" placeholder="開始時間" />
             終了時間
-            <input type="time" v-model="newEventEndTime" placeholder="終了時間" />
+            <input type="time" v-model="eventStore.newEventEndTime" placeholder="終了時間" />
           </div>
         </div>
-        <select v-model="newEventCategory">
+        <select v-model="eventStore.newEventCategory">
           <option value="仕事">仕事</option>
           <option value="プライベート">プライベート</option>
           <option value="健康">健康</option>
           <option value="趣味">趣味</option>
         </select>
-        <button @click="addEvent">追加</button>
+        <button @click="eventStore.addEvent()">追加</button>
       </div>
 
       <div class="events">
@@ -146,11 +74,8 @@ const selectedStatusFilter = ref('全て')
         </select>
 
         <EventCard
-          :events="events"
-          :selectedDate="selectedDate"
           :selectedCategoryFilter="selectedCategoryFilter"
           :selectedStatusFilter="selectedStatusFilter"
-          @update-events="handleUpdateEvents"
         />
 
       </div>
@@ -159,17 +84,10 @@ const selectedStatusFilter = ref('全て')
 </template>
 
 <style>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.4);
+.modal {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
 }
 .form {
   padding: 20px; 

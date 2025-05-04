@@ -1,39 +1,21 @@
 <script setup>
 import { ref } from 'vue'
+import { selectedDateStore } from '@/stores/selectedDateStore'
+import { storeToRefs } from 'pinia'
 import DayList from './components/DayList.vue'
 
-//日付管理
-const today = new Date()
-const todayMonth = ref(today.getMonth())
-const todayYear = ref(today.getFullYear())
+const dateStore = selectedDateStore()
+const { todayYear } = storeToRefs(dateStore)
 
-//イベント管理
-const events = ref({
-  startDate: '',
-  endDate: '',
-  text: '',
-  status: '',
-  category: '',
-  timeType: '',
-  startTime: '',
-  endTime: '',
-})
-const selectedDate = ref('')
-const selectedMonth = ref(null)
-
-const handleSelectDate = ({ clickedDate, month }) => {
-  if (selectedDate.value === clickedDate) {
-    selectedDate.value = ''
-    selectedMonth.value = null
-  } else {
-    selectedDate.value = clickedDate
-    selectedMonth.value = month
-  }  
-}
-
-const handleUpdateEvents = (newEvents) => {
-  events.value = newEvents
-}
+// const handleSelectDate = ({ clickedDate, month }) => {
+//   if (selectedDate.value === clickedDate) {
+//     selectedDate.value = ''
+//     selectedMonth.value = null
+//   } else {
+//     selectedDate.value = clickedDate
+//     selectedMonth.value = month
+//   }  
+// }
 
 </script>
 
@@ -42,15 +24,7 @@ const handleUpdateEvents = (newEvents) => {
     <h1>カレンダー予定管理</h1>
     <h2>{{ todayYear }}年</h2>
 
-    <DayList
-      :events="events"
-      :selectedDate="selectedDate"
-      :selectedMonth="selectedMonth"
-      :todayYear="todayYear"
-      :todayMonth="todayMonth"
-      @select-date="handleSelectDate"
-      @update-events="handleUpdateEvents"
-    />
+    <DayList />
 
   </div>
 </template>

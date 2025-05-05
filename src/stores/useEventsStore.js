@@ -15,7 +15,7 @@ export const useEventsStore = defineStore('event', () => {
   const newEventStartTime = ref('')
   const newEventEndTime = ref('')
 
-  const API_URL = 'https://json-server-project-fvmc.onrender.com'
+  const API_URL = 'https://json-server-project-fvmc.onrender.com/events'
    
   //APIからデータの取得(GET)
   const fetchEvents = async () => {

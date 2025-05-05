@@ -15,7 +15,7 @@ export const useEventsStore = defineStore('event', () => {
   const newEventStartTime = ref('')
   const newEventEndTime = ref('')
 
-  const API_URL = 'http://localhost:3001/events'
+  const API_URL = 'https://json-server-project-fvmc.onrender.com'
    
   //APIからデータの取得(GET)
   const fetchEvents = async () => {
@@ -106,22 +106,6 @@ export const useEventsStore = defineStore('event', () => {
       console.error('更新失敗:', error)
     }
   }
-  // const saveEventsToLocalStorage = (data) => {
-  //   localStorage.setItem('calendar-events', JSON.stringify(data))
-  // }
-  
-  // watch(() => events.value, (newEvents) => {
-  //   saveEventsToLocalStorage(newEvents)
-  // }, {deep: true})
-  
-  // const loadEventsFromLocalStorage = () => {
-  //   const stored = localStorage.getItem('calendar-events')
-  //   if (stored) {
-  //     events.value = JSON.parse(stored)
-  //   }
-  // }
-  // //ローカルストレージから呼び出す
-  // onMounted(loadEventsFromLocalStorage)
   
   return {
     events,

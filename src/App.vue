@@ -1,22 +1,17 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted } from 'vue'
+import { useEventsStore } from '@/stores/useEventsStore'
 import { selectedDateStore } from '@/stores/selectedDateStore'
 import { storeToRefs } from 'pinia'
 import DayList from './components/DayList.vue'
 
+const eventStore = useEventsStore()
 const dateStore = selectedDateStore()
 const { todayYear } = storeToRefs(dateStore)
 
-// const handleSelectDate = ({ clickedDate, month }) => {
-//   if (selectedDate.value === clickedDate) {
-//     selectedDate.value = ''
-//     selectedMonth.value = null
-//   } else {
-//     selectedDate.value = clickedDate
-//     selectedMonth.value = month
-//   }  
-// }
-
+onMounted(() => {
+  eventStore.fetchEvents()
+})
 </script>
 
 <template>

@@ -34,7 +34,6 @@ const activeEvents = computed(() => {
     return date >= event.startDate && date <= event.endDate
   })
 })
-// event => event.status !== '完了'
 
 </script>
 

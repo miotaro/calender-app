@@ -14,25 +14,18 @@ const props = defineProps({
   selectedStatusFilter: String,
 })
 
-const saveEdit = (index) => {
-  if (editText.value.trim()) {
-    const event = events.value[selectedDate.value][index]
-    event.text = editText.value.trim()
-    if (event.timeType === false) {
-      event.startTime = editStartTime.value
-      event.endTime = editEndTime.value
-    }
-    saveEventsToLocalStorage(events.value)
+const saveEdit = (event) => {
+  event.text = editText.value.trim()
+  if (event.timeType === false) {
+    event.startTime = editStartTime.value
+    event.endTime = editEndTime.value
   }
+  eventStore.updateEvent(event)
   cancelEdit()
 }
 
-const deleteEvent = (index) => {
-  const date = selectedDate.value
-  if (events.value[date] && events.value[date].length > index) {
-    events.value[date].splice(index, 1)
-  }
-  saveEventsToLocalStorage(events.value)
+const deleteEvent = (event) => {
+  eventStore.deleteEvent(event)
 }
 
 const cancelEdit = () => {
@@ -40,10 +33,6 @@ const cancelEdit = () => {
   editText.value = ''
   editStartTime.value = ''
   editEndTime.value = ''
-}
-
-const saveEventsToLocalStorage = (data) => {
-  localStorage.setItem('calendar-events', JSON.stringify(data))
 }
 
 const editEvent = ref(null)
@@ -65,8 +54,8 @@ const filterEvents = computed(() => {
   })
 })
 
-const startEdit = (index, event) => {
-  editEvent.value = index
+const startEdit = (event) => {
+  editEvent.value = event
   editText.value = event.text
   editStartTime.value = event.startTime || ''
   editEndTime.value = event.endTime || ''
@@ -79,14 +68,14 @@ const startEdit = (index, event) => {
   <li
     v-for="(event, index) in filterEvents"
     :key="event.text + index"
-    @click="startEdit(index, event)"
+    @click="startEdit(event)"
   >
-    <div v-if="editEvent === index">
-      <input v-model="editText" @keyup.enter="saveEdit(index)" />
+    <div v-if="editEvent === event">
+      <input v-model="editText" @keyup.enter="saveEdit(event)" />
       <span v-if="!event.timeType">
-        <input type="time" v-model="editStartTime" @keyup.enter="saveEdit(index)" />
+        <input type="time" v-model="editStartTime" @keyup.enter="saveEdit(event)" />
         〜
-        <input type="time" v-model="editEndTime" @keyup.enter="saveEdit(index)" />
+        <input type="time" v-model="editEndTime" @keyup.enter="saveEdit(event)" />
       </span>
     </div>
     <div v-else class="text-form">
@@ -102,7 +91,7 @@ const startEdit = (index, event) => {
         <option value="進行中">進行中</option>
         <option value="完了">完了</option>
       </select>
-      <button @click.stop="deleteEvent(index)">削除</button>
+      <button @click.stop="deleteEvent(event)">削除</button>
     </div>
   </li> 
 </ul>

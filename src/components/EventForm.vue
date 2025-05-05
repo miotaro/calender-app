@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia'
 import EventCard from './EventCard.vue'
 
 const eventStore = useEventsStore()
+const { newEventTimeType } = storeToRefs(eventStore)
 const dateStore = selectedDateStore()
 const { selectedDate } = storeToRefs(dateStore)
 
@@ -19,6 +20,20 @@ onMounted(() => {
   }
 })
 
+const toggleTimeType = () => {
+    newEventTimeType.value = !newEventTimeType.value
+  }
+  const toggleTimeTypeText = computed(() => {
+    return newEventTimeType.value ? '時間指定' : '終日' 
+  })
+
+  const handleEnter = (e) => {
+    // IME（日本語変換）中でなければ保存
+    if (e.isComposing === false) {
+      eventStore.addEvent()
+    }
+  }
+
 </script>
 
 <template>
@@ -30,9 +45,9 @@ onMounted(() => {
           v-model="eventStore.newEvent"
           ref="inputRef"
           placeholder="予定を入力してね"
-          @keydown.enter.exact.prevent="eventStore.handleEnter"
+          @keydown.enter.exact.prevent="handleEnter"
         />
-        <button @click="eventStore.toggleTimeType()">{{ eventStore.toggleTimeTypeText }}</button>
+        <button @click="toggleTimeType()">{{ toggleTimeTypeText }}</button>
         <div v-if="eventStore.newEventTimeType">
           <div class="event-date-time">
             終了日

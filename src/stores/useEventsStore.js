@@ -1,5 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref } from 'vue'
 import { selectedDateStore } from '@/stores/selectedDateStore'
 
 export const useEventsStore = defineStore('event', () => {
@@ -15,71 +15,114 @@ export const useEventsStore = defineStore('event', () => {
   const newEventStartTime = ref('')
   const newEventEndTime = ref('')
 
-  const toggleTimeType = () => {
-    newEventTimeType.value = !newEventTimeType.value
-  }
-  
-  const toggleTimeTypeText = computed(() => {
-    return newEventTimeType.value ? '時間指定' : '終日' 
-  })
+  const API_URL = 'http://localhost:3001/events'
    
-  const addEvent = () => {
+  //APIからデータの取得(GET)
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch(API_URL)
+      const data = await res.json()
+
+      const grouped = {}
+      data.forEach(event => {
+        const date = event.startDate
+        if (!grouped[date]) grouped[date] = []
+        grouped[date].push(event)
+      })
+      events.value = grouped
+    } catch (error) {
+      console.error('予定取得失敗', error)
+    }
+  }
+
+  //APIにデータを保存(POST) 、state更新
+  const addEvent = async () => {
     const text = newEvent.value.trim()
     const startD = selectedDate.value
     const endD = newEventEndDate.value || startD
     const type = newEventTimeType.value
+    const category = newEventCategory.value
     const startT = newEventStartTime.value
     const endT = newEventEndTime.value
   
     if (!text || !startD) return
   
-    const updateEvents = { ...events.value }
-    if (!updateEvents[startD]) {
-      updateEvents[startD] = []
-    }
-  
-    updateEvents[startD].push({
+    const eventObj = {
       startDate: startD,
       endDate: endD,
       text,
       status: '未着手',
-      category: newEventCategory.value,
+      category: category,
       timeType: type,
       ...(type === false && { startTime: startT, endTime: endT })
-    })
-  
-    newEvent.value = ''
-    newEventEndDate.value = ''
-    newEventStartTime.value = ''
-    newEventEndTime.value = ''
-    saveEventsToLocalStorage(updateEvents)
-    events.value = updateEvents
-  }
-  
-  const saveEventsToLocalStorage = (data) => {
-    localStorage.setItem('calendar-events', JSON.stringify(data))
-  }
-  
-  watch(() => events.value, (newEvents) => {
-    saveEventsToLocalStorage(newEvents)
-  }, {deep: true})
-  
-  const loadEventsFromLocalStorage = () => {
-    const stored = localStorage.getItem('calendar-events')
-    if (stored) {
-      events.value = JSON.parse(stored)
+    }
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventObj)
+      })
+      const savedEvent = await res.json()
+
+      if (!events.value[startD]) {
+        events.value[startD] = []
+      }
+      events.value[startD].push(savedEvent)
+
+      newEvent.value = ''
+      newEventEndDate.value = ''
+      newEventStartTime.value = ''
+      newEventEndTime.value = ''
+    } catch (error) {
+      console.log.error('予定保存失敗', error)
     }
   }
-  //ローカルストレージから呼び出す
-  onMounted(loadEventsFromLocalStorage)
-  
-  // 日本語入力中は保存しない
-  const handleEnter = (e) => {
-    // IME（日本語変換）中でなければ保存
-    if (e.isComposing === false) {
-      addEvent()
+
+  const deleteEvent = async (event) => {
+    try {
+      await fetch(`${API_URL}/${event.id}`, {method: 'DELETE'})
+      const date = event.startDate
+      events.value[date] = events.value[date].filter(e => e.id !== event.id)
+    } catch (error) {
+      console.error('削除失敗:', error)
     }
   }
+  
+  const updateEvent = async (event) => {
+    try {
+      const res = await fetch(`${API_URL}/${event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event)
+      })
+      const updated = await res.json()
+      const date = updated.startDate
+      const idx = events.value[date].findIndex(e => e.id === event.id)
+      if (idx !== -1) {
+        events.value[date][idx] = updated
+      }
+    } catch (error) {
+      console.error('更新失敗:', error)
+    }
+  }
+  // const saveEventsToLocalStorage = (data) => {
+  //   localStorage.setItem('calendar-events', JSON.stringify(data))
+  // }
+  
+  // watch(() => events.value, (newEvents) => {
+  //   saveEventsToLocalStorage(newEvents)
+  // }, {deep: true})
+  
+  // const loadEventsFromLocalStorage = () => {
+  //   const stored = localStorage.getItem('calendar-events')
+  //   if (stored) {
+  //     events.value = JSON.parse(stored)
+  //   }
+  // }
+  // //ローカルストレージから呼び出す
+  // onMounted(loadEventsFromLocalStorage)
+  
   return {
     events,
     newEvent,
@@ -88,9 +131,9 @@ export const useEventsStore = defineStore('event', () => {
     newEventTimeType,
     newEventStartTime,
     newEventEndTime,
-    toggleTimeType,
-    toggleTimeTypeText,
     addEvent,
-    handleEnter,
+    fetchEvents,
+    deleteEvent,
+    updateEvent
   }
 })
